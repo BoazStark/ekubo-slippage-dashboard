@@ -253,6 +253,12 @@ export default function Simulate() {
           >
             Simulate
           </a>
+          <a
+            href="/docs"
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border-b-2 border-transparent"
+          >
+            📚 Docs
+          </a>
         </div>
 
         {/* Color Guide */}
