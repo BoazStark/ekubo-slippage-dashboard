@@ -142,7 +142,7 @@ export default function Simulate() {
   };
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
+    <main className="min-h-screen p-4 md:p-8 bg-gray-50 dark:bg-gray-900 transition-colors">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
