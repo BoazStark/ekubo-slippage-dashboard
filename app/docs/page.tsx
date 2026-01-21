@@ -45,9 +45,9 @@ export default function Docs() {
             <h2 className="text-lg font-semibold mb-3 mt-0">📑 Table of Contents</h2>
             <ul className="space-y-1 mb-0">
               <li><a href="#overview" className="text-blue-600 dark:text-blue-400 hover:underline">Overview</a></li>
-              <li><a href="#getting-started" className="text-blue-600 dark:text-blue-400 hover:underline">Getting Started</a></li>
               <li><a href="#dashboard" className="text-blue-600 dark:text-blue-400 hover:underline">Dashboard Tab</a></li>
               <li><a href="#simulate" className="text-blue-600 dark:text-blue-400 hover:underline">Simulate Tab</a></li>
+              <li><a href="#export" className="text-blue-600 dark:text-blue-400 hover:underline">Exporting Data</a></li>
               <li><a href="#understanding" className="text-blue-600 dark:text-blue-400 hover:underline">Understanding Slippage</a></li>
               <li><a href="#liquidity" className="text-blue-600 dark:text-blue-400 hover:underline">Liquidity Recommendations</a></li>
               <li><a href="#troubleshooting" className="text-blue-600 dark:text-blue-400 hover:underline">Troubleshooting</a></li>
@@ -72,18 +72,6 @@ export default function Docs() {
                 <li><strong>Dark mode</strong> for comfortable viewing</li>
               </ul>
             </div>
-          </section>
-
-          {/* Getting Started */}
-          <section id="getting-started">
-            <h2>🚀 Getting Started</h2>
-            <p>The dashboard consists of three main sections accessible via the top navigation:</p>
-            <ol>
-              <li><strong>Dashboard</strong> - Overview of all pools with slippage estimates</li>
-              <li><strong>Simulate</strong> - Custom slippage calculator for specific pools and amounts</li>
-              <li><strong>Docs</strong> - This documentation page</li>
-            </ol>
-            <p>Toggle between <strong>light</strong> and <strong>dark mode</strong> using the button in the top-right corner (☀️/🌙).</p>
           </section>
 
           {/* Dashboard Tab */}
@@ -127,12 +115,87 @@ export default function Docs() {
               <li>The pool count updates dynamically based on active filters</li>
             </ul>
 
-            <h3>Export to CSV</h3>
-            <p>Click the <strong>📥 Export to CSV</strong> button to download all visible pool data, including slippage estimates and liquidity recommendations, for analysis in Excel or other tools.</p>
-
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
               <p className="font-semibold mb-2">ℹ️ About Dashboard Estimates</p>
               <p className="mb-0">Slippage values are <strong>simplified approximations</strong> using the formula: (Swap Amount / Pool TVL) × 100 + Fee. For precise calculations based on actual concentrated liquidity data, use the <strong>Simulate</strong> tab.</p>
+            </div>
+          </section>
+
+          {/* Exporting Data */}
+          <section id="export">
+            <h2>📥 Exporting Data</h2>
+            
+            <h3>How to Export</h3>
+            <ol>
+              <li>Go to the <strong>Dashboard</strong> tab</li>
+              <li>(Optional) Apply filters to show only pools you're interested in</li>
+              <li>Click the green <strong>"📥 Export CSV"</strong> button</li>
+              <li>A CSV file will download with name: <code>ekubo-pools-YYYY-MM-DD.csv</code></li>
+            </ol>
+
+            <h3>CSV File Contents</h3>
+            <p>The exported file includes these columns for each pool:</p>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg my-4">
+              <p className="font-semibold mb-2">Basic Information:</p>
+              <ul className="mb-0">
+                <li>Pool name (e.g., ETH/USDC)</li>
+                <li>Token0 Symbol</li>
+                <li>Token1 Symbol</li>
+                <li>Token0 Price</li>
+                <li>Token1 Price</li>
+                <li>TVL (USD)</li>
+                <li>Fee (%)</li>
+              </ul>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg my-4">
+              <p className="font-semibold mb-2">Slippage Data:</p>
+              <ul className="mb-0">
+                <li>$1K Slippage (%)</li>
+                <li>$1K Liquidity Needed (±0.5% band)</li>
+                <li>$5K Slippage (%)</li>
+                <li>$5K Liquidity Needed (±0.5% band)</li>
+                <li>$10K Slippage (%)</li>
+                <li>$10K Liquidity Needed (±0.5% band)</li>
+                <li>$50K Slippage (%)</li>
+                <li>$50K Liquidity Needed (±0.5% band)</li>
+              </ul>
+            </div>
+
+            <h3>What Can You Do With The CSV?</h3>
+            <ul>
+              <li><strong>Excel/Google Sheets</strong> - Open in spreadsheet software for analysis</li>
+              <li><strong>Sort & Filter</strong> - Find pools meeting specific criteria</li>
+              <li><strong>Charts</strong> - Create visualizations of slippage vs. TVL</li>
+              <li><strong>Reports</strong> - Share data with team members</li>
+              <li><strong>Historical Tracking</strong> - Compare exports over time to see changes</li>
+            </ul>
+
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <p className="font-semibold mb-2">💡 Tips:</p>
+              <ul className="mb-0">
+                <li>The CSV respects your current search and filter settings</li>
+                <li>Export regularly to track liquidity changes over time</li>
+                <li>Use Excel pivot tables to analyze patterns across pools</li>
+                <li>Developers can access raw data via API endpoint: <code>/api/pools/slippage</code></li>
+              </ul>
+            </div>
+
+            <h3>How to Open CSV Files</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                <p className="font-semibold text-sm mb-1">🪟 Windows</p>
+                <p className="text-xs mb-0">Right-click → Open with → Excel</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                <p className="font-semibold text-sm mb-1">🍎 Mac</p>
+                <p className="text-xs mb-0">Double-click (opens in Numbers/Excel)</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                <p className="font-semibold text-sm mb-1">☁️ Google Sheets</p>
+                <p className="text-xs mb-0">File → Import → Upload</p>
+              </div>
             </div>
           </section>
 
