@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatUSD, formatPercent } from '@/lib/utils';
+import { DarkModeToggle } from '@/components/DarkModeToggle';
 
 interface Pool {
   poolKeyId: string;
@@ -23,6 +24,8 @@ export default function Simulate() {
   const [swapAmount, setSwapAmount] = useState<string>('1000');
   const [loading, setLoading] = useState(true);
   const [slippage, setSlippage] = useState<number | null>(null);
+  const [targetSlippage, setTargetSlippage] = useState<string>('0.5');
+  const [rangeWidth, setRangeWidth] = useState<string>('0.5');
 
   useEffect(() => {
     const fetchPools = async () => {
@@ -60,26 +63,26 @@ export default function Simulate() {
     }
   }, [selectedPool, swapAmount]);
 
-  // Calculate required concentrated liquidity for excellent slippage (< 0.5%)
-  // Uses ±0.5% band around current price for concentrated liquidity
+  // Calculate required concentrated liquidity for target slippage
+  // Uses configurable band around current price for concentrated liquidity
   const calculateRequiredLiquidity = () => {
     if (!selectedPool || !swapAmount) return null;
     const amount = parseFloat(swapAmount);
     if (isNaN(amount) || amount <= 0) return null;
 
-    const targetSlippage = 0.5; // Target: excellent slippage < 0.5%
-    const targetPriceImpact = targetSlippage - selectedPool.feePercent;
+    const targetSlippageValue = parseFloat(targetSlippage) || 0.5;
+    const targetPriceImpact = targetSlippageValue - selectedPool.feePercent;
     
-    // If fee is already >= 0.5%, we can't reach excellent slippage
+    // If fee is already >= target slippage, we can't reach the target
     if (targetPriceImpact <= 0) {
       return null;
     }
 
-    // For concentrated liquidity in a ±0.5% band:
-    // The price range is [P × 0.995, P × 1.005], a 1% total range
+    // For concentrated liquidity with configurable band:
     // Capital efficiency multiplier ≈ 1 / (range width)
-    const rangeWidth = 0.01; // 1% range (±0.5%)
-    const capitalEfficiencyMultiplier = 1 / rangeWidth; // ~100x
+    const rangeWidthValue = parseFloat(rangeWidth) || 0.5;
+    const rangeWidthDecimal = (rangeWidthValue / 100) * 2; // Convert ±X% to decimal total range
+    const capitalEfficiencyMultiplier = 1 / rangeWidthDecimal;
     
     // Calculate required price impact reduction
     // Current price impact = (swapAmount / currentTVL) * 100
@@ -95,21 +98,23 @@ export default function Simulate() {
     // Additional effective TVL needed beyond current pool TVL
     const additionalEffectiveTVL = Math.max(0, requiredEffectiveTVL - selectedPool.tvlUsd);
     
-    // Convert to actual capital needed in ±0.5% range
+    // Convert to actual capital needed in the specified range
     const additionalCapitalNeeded = additionalEffectiveTVL / capitalEfficiencyMultiplier;
     
-    // Price bounds for the ±0.5% range
-    const lowerPrice = selectedPool.token0Price * 0.995;
-    const upperPrice = selectedPool.token0Price * 1.005;
+    // Price bounds for the specified range
+    const rangeMultiplier = 1 - (rangeWidthValue / 100);
+    const lowerPrice = selectedPool.token0Price * rangeMultiplier;
+    const upperPrice = selectedPool.token0Price * (2 - rangeMultiplier);
 
     return {
       capitalNeeded: additionalCapitalNeeded,
       efficiency: capitalEfficiencyMultiplier,
-      rangeWidth: rangeWidth * 100, // as percentage
+      rangeWidthPercent: rangeWidthValue,
       lowerPrice,
       upperPrice,
       currentPriceImpact,
-      targetPriceImpact
+      targetPriceImpact,
+      targetSlippageValue
     };
   };
 
@@ -141,12 +146,17 @@ export default function Simulate() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Slippage Simulator
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Estimate slippage for custom swap amounts
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Slippage Simulator
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Estimate slippage for custom swap amounts
+              </p>
+            </div>
+            <DarkModeToggle />
+          </div>
         </div>
 
         {/* Navigation */}
@@ -227,7 +237,7 @@ export default function Simulate() {
                 min="0"
                 step="100"
               />
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex gap-2 flex-wrap">
                 {[100, 500, 1000, 5000, 10000, 50000].map((amount) => (
                   <button
                     key={amount}
@@ -237,6 +247,49 @@ export default function Simulate() {
                     ${amount.toLocaleString()}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Configuration */}
+            <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
+                ⚙️ Liquidity Recommendation Settings
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">
+                    Target Slippage (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={targetSlippage}
+                    onChange={(e) => setTargetSlippage(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    min="0.01"
+                    max="10"
+                    step="0.1"
+                  />
+                  <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">
+                    Calculate liquidity needed to achieve this slippage
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">
+                    Liquidity Range (±%)
+                  </label>
+                  <input
+                    type="number"
+                    value={rangeWidth}
+                    onChange={(e) => setRangeWidth(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    min="0.1"
+                    max="10"
+                    step="0.1"
+                  />
+                  <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">
+                    Width of concentrated liquidity position
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -291,7 +344,7 @@ export default function Simulate() {
                 </div>
 
                 {/* Concentrated Liquidity Recommendation */}
-                {liquidityCalc && slippage >= 0.5 && (
+                {liquidityCalc && slippage >= parseFloat(targetSlippage) && (
                   <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <div className="flex items-start gap-3">
                       <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,15 +352,15 @@ export default function Simulate() {
                       </svg>
                       <div className="w-full">
                         <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                          💡 Liquidity Recommendation for Excellent Slippage (&lt; 0.5%)
+                          💡 Liquidity Recommendation for {liquidityCalc.targetSlippageValue}% Slippage
                         </p>
                         {liquidityCalc.capitalNeeded === 0 ? (
                           <p className="text-sm text-blue-700 dark:text-blue-300">
-                            ✨ This pool already has sufficient liquidity for excellent slippage!
+                            ✨ This pool already has sufficient liquidity for {liquidityCalc.targetSlippageValue}% slippage!
                           </p>
-                        ) : selectedPool && selectedPool.feePercent >= 0.5 ? (
+                        ) : selectedPool && selectedPool.feePercent >= liquidityCalc.targetSlippageValue ? (
                           <div className="text-sm text-orange-700 dark:text-orange-300">
-                            ⚠️ The pool fee ({selectedPool.feePercent.toFixed(2)}%) is already ≥ 0.5%, so excellent slippage cannot be achieved regardless of liquidity added.
+                            ⚠️ The pool fee ({selectedPool.feePercent.toFixed(2)}%) is already ≥ {liquidityCalc.targetSlippageValue}%, so {liquidityCalc.targetSlippageValue}% slippage cannot be achieved regardless of liquidity added.
                           </div>
                         ) : (
                           <div className="space-y-3">
@@ -323,7 +376,7 @@ export default function Simulate() {
                                 {formatUSD(liquidityCalc.capitalNeeded)}
                               </p>
                               <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                                <p>• <strong>Range:</strong> ±0.5% from current price ({liquidityCalc.rangeWidth.toFixed(1)}% width)</p>
+                                <p>• <strong>Range:</strong> ±{liquidityCalc.rangeWidthPercent}% from current price ({(liquidityCalc.rangeWidthPercent * 2).toFixed(1)}% total width)</p>
                                 <p>• <strong>Price bounds:</strong> {liquidityCalc.lowerPrice >= 10 ? liquidityCalc.lowerPrice.toFixed(0) : liquidityCalc.lowerPrice.toFixed(2)} - {liquidityCalc.upperPrice >= 10 ? liquidityCalc.upperPrice.toFixed(0) : liquidityCalc.upperPrice.toFixed(2)} {selectedPool?.token1Symbol}</p>
                                 <p>• <strong>Capital efficiency:</strong> ~{liquidityCalc.efficiency.toFixed(0)}x vs full-range</p>
                               </div>
@@ -348,7 +401,7 @@ export default function Simulate() {
 
                             {/* Note */}
                             <p className="text-xs text-blue-600 dark:text-blue-400 italic">
-                              💡 By concentrating liquidity in a narrow ±0.5% range, you achieve the same slippage reduction with ~{liquidityCalc.efficiency.toFixed(0)}x less capital than full-range liquidity.
+                              💡 By concentrating liquidity in a narrow ±{liquidityCalc.rangeWidthPercent}% range, you achieve the same slippage reduction with ~{liquidityCalc.efficiency.toFixed(0)}x less capital than full-range liquidity.
                             </p>
                           </div>
                         )}

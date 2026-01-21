@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatUSD, formatPercent, formatFee, getSlippageColor } from '@/lib/utils';
+import { DarkModeToggle } from '@/components/DarkModeToggle';
 
 interface Pool {
   poolKeyId: string;
@@ -153,17 +154,22 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Ekubo Pool Slippage Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Real-time slippage estimates for Ekubo protocol pools on Starknet
-          </p>
-          {pools.length > 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Showing {filteredPools.length} {filteredPools.length === 1 ? 'pool' : 'pools'} {searchTerm && `of ${pools.length} total`}
-            </p>
-          )}
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Ekubo Pool Slippage Dashboard
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Real-time slippage estimates for Ekubo protocol pools on Starknet
+              </p>
+              {pools.length > 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Showing {filteredPools.length} {filteredPools.length === 1 ? 'pool' : 'pools'} {searchTerm && `of ${pools.length} total`}
+                </p>
+              )}
+            </div>
+            <DarkModeToggle />
+          </div>
         </div>
 
         {/* Navigation */}
