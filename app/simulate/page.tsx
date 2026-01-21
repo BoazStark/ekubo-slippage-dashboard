@@ -13,6 +13,8 @@ interface Pool {
   token1Price: number;
   feePercent: number;
   tvlUsd: number;
+  currentTick?: number;
+  tickSpacing?: number;
 }
 
 interface ApiResponse {
@@ -63,14 +65,32 @@ export default function Simulate() {
           try {
             if (calculationMode === 'precise') {
               // Fetch tick liquidity data and use precise calculation
-              const response = await fetch(`/api/pools/${selectedPool.poolKeyId}/ticks`);
-              
-              if (response.ok) {
+              try {
+                const response = await fetch(`/api/pools/${selectedPool.poolKeyId}/ticks`);
+                
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch ticks: ${response.status} ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                
+                if (!data.ticks || data.ticks.length === 0) {
+                  throw new Error('No tick data available for this pool');
+                }
+                
                 const ticks = data.ticks.map((t: any) => ({
                   tick: t.tick,
                   liquidityDelta: BigInt(t.liquidityDelta)
                 }));
+                
+                // Validate required fields
+                if (!selectedPool.currentTick || !selectedPool.tickSpacing) {
+                  throw new Error('Missing currentTick or tickSpacing data');
+                }
+                
+                if (!selectedPool.token0Price || selectedPool.token0Price <= 0) {
+                  throw new Error('Invalid token0 price');
+                }
                 
                 // Convert USD to token amount (approximate using token0)
                 const amountInToken = BigInt(Math.floor((amount / selectedPool.token0Price) * Math.pow(10, 18)));
@@ -79,17 +99,17 @@ export default function Simulate() {
                 const result = calculateSwapOutput(
                   amountInToken,
                   true, // zeroForOne (swapping token0 for token1)
-                  BigInt(selectedPool.currentTick || 0),
-                  BigInt(selectedPool.currentTick || 0),
+                  BigInt(selectedPool.currentTick),
+                  BigInt(selectedPool.currentTick),
                   BigInt(Math.floor(selectedPool.tvlUsd * Math.pow(10, 18))), // Approximate liquidity
-                  selectedPool.tickSpacing || 1,
+                  selectedPool.tickSpacing,
                   ticks
                 );
                 
                 setSlippage(Math.min(result.priceImpact + selectedPool.feePercent, 100));
-              } else {
-                // Fall back to estimate if tick data unavailable
-                console.warn('Tick data unavailable, falling back to estimate');
+              } catch (preciseError) {
+                // Fall back to estimate if tick data unavailable or any error
+                console.warn('Precise calculation failed, falling back to estimate:', preciseError);
                 const priceImpact = (amount / selectedPool.tvlUsd) * 100;
                 const totalSlippage = priceImpact + selectedPool.feePercent;
                 setSlippage(Math.min(totalSlippage, 100));

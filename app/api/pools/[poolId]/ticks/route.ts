@@ -17,7 +17,22 @@ export async function GET(
       );
     }
     
+    console.log(`Fetching ticks for pool: ${poolKeyId}`);
     const ticks = await fetchTickLiquidities(poolKeyId);
+    console.log(`Found ${ticks.length} ticks for pool ${poolKeyId}`);
+    
+    if (ticks.length === 0) {
+      console.warn(`No ticks found for pool ${poolKeyId}`);
+      return NextResponse.json(
+        { 
+          error: 'No tick data available',
+          poolKeyId,
+          ticks: [],
+          count: 0
+        },
+        { status: 404 }
+      );
+    }
     
     return NextResponse.json({
       poolKeyId,
@@ -32,7 +47,8 @@ export async function GET(
     return NextResponse.json(
       { 
         error: 'Failed to fetch tick liquidity data',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        poolKeyId: params.poolId
       },
       { status: 500 }
     );
