@@ -419,11 +419,18 @@ export default function Simulate() {
             {/* Slippage Result */}
             {slippage !== null && (
               <div>
-                <div className={`p-6 rounded-lg ${getSlippageBackgroundColor(slippage)} border-2 ${slippage < 0.5 ? 'border-green-300 dark:border-green-700' : slippage < 2 ? 'border-yellow-300 dark:border-yellow-700' : slippage < 5 ? 'border-orange-300 dark:border-orange-700' : 'border-red-300 dark:border-red-700'}`}>
+                <div className={`p-6 rounded-lg ${getSlippageBackgroundColor(slippage)} border-2 ${slippage < 0.5 ? 'border-green-300 dark:border-green-700' : slippage < 1 ? 'border-yellow-300 dark:border-yellow-700' : slippage < 5 ? 'border-orange-300 dark:border-orange-700' : 'border-red-300 dark:border-red-700'}`}>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                      Estimated Slippage
-                    </p>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Estimated Slippage {calculating && <span className="text-xs">(Calculating...)</span>}
+                      </p>
+                      {calculationMode === 'precise' && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded">
+                          PRECISE
+                        </span>
+                      )}
+                    </div>
                     <p className={`text-5xl font-bold ${getSlippageColor(slippage)}`}>
                       {formatPercent(slippage)}
                     </p>
@@ -434,7 +441,7 @@ export default function Simulate() {
                 </div>
 
                 {/* Concentrated Liquidity Recommendation */}
-                {liquidityCalc && slippage >= parseFloat(targetSlippage) && (
+                {liquidityCalc && (
                   <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <div className="flex items-start gap-3">
                       <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,9 +449,18 @@ export default function Simulate() {
                       </svg>
                       <div className="w-full">
                         <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                          💡 Liquidity Recommendation for {liquidityCalc.targetSlippageValue}% Slippage
+                          💡 Liquidity Recommendation for {liquidityCalc.targetSlippageValue}% Target Slippage
                         </p>
-                        {liquidityCalc.capitalNeeded === 0 ? (
+                        {slippage < liquidityCalc.targetSlippageValue ? (
+                          <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg border-2 border-green-400 dark:border-green-600">
+                            <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
+                              ✨ Current slippage ({formatPercent(slippage)}) is already below your {liquidityCalc.targetSlippageValue}% target!
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-300">
+                              No additional liquidity needed for this swap amount. 🎉
+                            </p>
+                          </div>
+                        ) : liquidityCalc.capitalNeeded === 0 ? (
                           <p className="text-sm text-blue-700 dark:text-blue-300">
                             ✨ This pool already has sufficient liquidity for {liquidityCalc.targetSlippageValue}% slippage!
                           </p>
