@@ -35,12 +35,6 @@ export default function Docs() {
           >
             Simulate
           </a>
-          <a
-            href="/docs"
-            className="px-4 py-2 text-blue-600 dark:text-blue-400 font-medium border-b-2 border-blue-600 dark:border-blue-400"
-          >
-            Docs
-          </a>
         </div>
 
         {/* Content */}

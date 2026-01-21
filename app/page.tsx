@@ -168,7 +168,15 @@ export default function Home() {
                 </p>
               )}
             </div>
-            <DarkModeToggle />
+            <div className="flex items-center gap-3">
+              <a
+                href="/docs"
+                className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium text-sm flex items-center gap-2"
+              >
+                📚 Docs
+              </a>
+              <DarkModeToggle />
+            </div>
           </div>
         </div>
 
@@ -185,12 +193,6 @@ export default function Home() {
             className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border-b-2 border-transparent"
           >
             Simulate
-          </a>
-          <a
-            href="/docs"
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border-b-2 border-transparent"
-          >
-            📚 Docs
           </a>
         </div>
 
