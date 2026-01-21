@@ -95,12 +95,17 @@ export default function Simulate() {
                 // Convert USD to token amount (approximate using token0)
                 const amountInToken = BigInt(Math.floor((amount / selectedPool.token0Price) * Math.pow(10, 18)));
                 
+                // Calculate current sqrt price from tick
+                // sqrtPrice = 1.0001^(tick/2) * 2^96
+                const Q96 = 2n ** 96n;
+                const currentSqrtPrice = BigInt(Math.floor(Math.pow(1.0001, selectedPool.currentTick / 2) * Number(Q96)));
+                
                 // Use precise concentrated liquidity calculation
                 const result = calculateSwapOutput(
                   amountInToken,
                   true, // zeroForOne (swapping token0 for token1)
-                  BigInt(selectedPool.currentTick),
-                  BigInt(selectedPool.currentTick),
+                  currentSqrtPrice,
+                  selectedPool.currentTick, // number, not bigint
                   BigInt(Math.floor(selectedPool.tvlUsd * Math.pow(10, 18))), // Approximate liquidity
                   selectedPool.tickSpacing,
                   ticks
