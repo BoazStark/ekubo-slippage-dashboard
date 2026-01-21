@@ -377,9 +377,18 @@ export default function Home() {
         )}
 
         {/* Info */}
-        <div className="mt-6 text-sm text-gray-500 dark:text-gray-400 text-center">
-          <p>Slippage estimates are calculated based on current pool liquidity and may vary with actual trades.</p>
-          <p className="mt-1">Data updates every 60 seconds automatically.</p>
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="font-semibold mb-1">ℹ️ About Slippage Estimates</p>
+              <p>Slippage values shown are <strong>simplified approximations</strong> using the formula: (Swap Amount / Pool TVL) × 100 + Fee. These estimates assume uniform liquidity distribution and may differ from actual execution due to concentrated liquidity positioning.</p>
+              <p className="mt-2">For more precise calculations based on actual tick-by-tick liquidity data, use the <strong>Simulate</strong> tab.</p>
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Data updates every 60 seconds automatically.</p>
+            </div>
+          </div>
         </div>
       </div>
     </main>

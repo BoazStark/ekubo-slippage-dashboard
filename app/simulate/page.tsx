@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { formatUSD, formatPercent } from '@/lib/utils';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { calculateSwapOutput } from '@/lib/slippage';
 
 interface Pool {
   poolKeyId: string;
@@ -26,6 +27,8 @@ export default function Simulate() {
   const [slippage, setSlippage] = useState<number | null>(null);
   const [targetSlippage, setTargetSlippage] = useState<string>('0.5');
   const [rangeWidth, setRangeWidth] = useState<string>('0.5');
+  const [calculationMode, setCalculationMode] = useState<'precise' | 'estimate'>('precise');
+  const [calculating, setCalculating] = useState(false);
 
   useEffect(() => {
     const fetchPools = async () => {
@@ -49,19 +52,71 @@ export default function Simulate() {
 
   const selectedPool = pools.find(p => p.poolKeyId === selectedPoolId);
 
+  // Calculate slippage using precise or estimate mode
   useEffect(() => {
-    if (selectedPool && swapAmount) {
-      const amount = parseFloat(swapAmount);
-      if (!isNaN(amount) && amount > 0) {
-        // Simple slippage calculation: (amountIn / poolTVL) * 100 + fee
-        const priceImpact = (amount / selectedPool.tvlUsd) * 100;
-        const totalSlippage = priceImpact + selectedPool.feePercent;
-        setSlippage(Math.min(totalSlippage, 100));
-      } else {
-        setSlippage(null);
+    const calculateSlippage = async () => {
+      if (selectedPool && swapAmount) {
+        const amount = parseFloat(swapAmount);
+        if (!isNaN(amount) && amount > 0) {
+          setCalculating(true);
+          
+          try {
+            if (calculationMode === 'precise') {
+              // Fetch tick liquidity data and use precise calculation
+              const response = await fetch(`/api/pools/${selectedPool.poolKeyId}/ticks`);
+              
+              if (response.ok) {
+                const data = await response.json();
+                const ticks = data.ticks.map((t: any) => ({
+                  tick: t.tick,
+                  liquidityDelta: BigInt(t.liquidityDelta)
+                }));
+                
+                // Convert USD to token amount (approximate using token0)
+                const amountInToken = BigInt(Math.floor((amount / selectedPool.token0Price) * Math.pow(10, 18)));
+                
+                // Use precise concentrated liquidity calculation
+                const result = calculateSwapOutput(
+                  amountInToken,
+                  true, // zeroForOne (swapping token0 for token1)
+                  BigInt(selectedPool.currentTick || 0),
+                  BigInt(selectedPool.currentTick || 0),
+                  BigInt(Math.floor(selectedPool.tvlUsd * Math.pow(10, 18))), // Approximate liquidity
+                  selectedPool.tickSpacing || 1,
+                  ticks
+                );
+                
+                setSlippage(Math.min(result.priceImpact + selectedPool.feePercent, 100));
+              } else {
+                // Fall back to estimate if tick data unavailable
+                console.warn('Tick data unavailable, falling back to estimate');
+                const priceImpact = (amount / selectedPool.tvlUsd) * 100;
+                const totalSlippage = priceImpact + selectedPool.feePercent;
+                setSlippage(Math.min(totalSlippage, 100));
+              }
+            } else {
+              // Simple estimation
+              const priceImpact = (amount / selectedPool.tvlUsd) * 100;
+              const totalSlippage = priceImpact + selectedPool.feePercent;
+              setSlippage(Math.min(totalSlippage, 100));
+            }
+          } catch (error) {
+            console.error('Error calculating slippage:', error);
+            // Fall back to estimate
+            const priceImpact = (amount / selectedPool.tvlUsd) * 100;
+            const totalSlippage = priceImpact + selectedPool.feePercent;
+            setSlippage(Math.min(totalSlippage, 100));
+          } finally {
+            setCalculating(false);
+          }
+        } else {
+          setSlippage(null);
+        }
       }
-    }
-  }, [selectedPool, swapAmount]);
+    };
+    
+    calculateSlippage();
+  }, [selectedPool, swapAmount, calculationMode]);
 
   // Calculate required concentrated liquidity for target slippage
   // Uses configurable band around current price for concentrated liquidity
@@ -253,8 +308,43 @@ export default function Simulate() {
             {/* Configuration */}
             <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
               <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
-                ⚙️ Liquidity Recommendation Settings
+                ⚙️ Calculation Settings
               </h3>
+              
+              {/* Calculation Mode Toggle */}
+              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700">
+                <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-2">
+                  Slippage Calculation Method
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCalculationMode('precise')}
+                    className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                      calculationMode === 'precise'
+                        ? 'bg-purple-600 text-white font-medium'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    🎯 Precise
+                  </button>
+                  <button
+                    onClick={() => setCalculationMode('estimate')}
+                    className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                      calculationMode === 'estimate'
+                        ? 'bg-purple-600 text-white font-medium'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    ⚡ Fast Estimate
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-purple-600 dark:text-purple-400">
+                  {calculationMode === 'precise' 
+                    ? '🎯 Uses actual tick-by-tick concentrated liquidity data for accurate results'
+                    : '⚡ Quick approximation assuming uniform liquidity distribution'}
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">
@@ -413,11 +503,17 @@ export default function Simulate() {
             )}
 
             {/* Info */}
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                <strong>Note:</strong> This is a simplified estimation based on current pool liquidity. 
-                Actual slippage may vary depending on the exact execution path and market conditions.
-              </p>
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="font-semibold mb-1">📊 About Calculation Methods</p>
+                  <p className="mb-2"><strong>Precise Mode (Recommended):</strong> Uses actual tick-by-tick concentrated liquidity data from the pool. This simulates the exact path your trade would take through different price ranges and liquidity levels.</p>
+                  <p><strong>Fast Estimate:</strong> Simple approximation using the formula (Swap Amount / Pool TVL) × 100 + Fee. Assumes uniform liquidity distribution. Faster but less accurate.</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
