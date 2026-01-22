@@ -173,13 +173,27 @@ export default function Simulate() {
     // For concentrated liquidity, the effective TVL is actual TVL * efficiency multiplier (within range)
     
     // Required effective TVL = swapAmount * 100 / targetPriceImpact
+    // This is the total effective TVL needed (not just additional)
     const requiredEffectiveTVL = (amount * 100) / targetPriceImpact;
     
-    // Additional effective TVL needed beyond current pool TVL
-    const additionalEffectiveTVL = Math.max(0, requiredEffectiveTVL - selectedPool.tvlUsd);
+    // Current effective TVL in the target band
+    // Note: Current pool TVL is likely spread across full range or wider bands
+    // For a very narrow band (e.g., 0.001%), assume minimal current liquidity in that band
+    // For wider bands, we could estimate, but for narrow bands, assume ~0 for safety
+    const currentEffectiveTVLInBand = rangeWidthValue < 0.1 
+      ? 0 // Very narrow bands: assume no current liquidity in that exact range
+      : selectedPool.tvlUsd * (rangeWidthDecimal / 1.0); // Wider bands: assume proportional
+    
+    // Additional effective TVL needed in the target band
+    const additionalEffectiveTVL = Math.max(0, requiredEffectiveTVL - currentEffectiveTVLInBand);
     
     // Convert to actual capital needed in the specified range
     const additionalCapitalNeeded = additionalEffectiveTVL / capitalEfficiencyMultiplier;
+    
+    // Sanity check: Total effective TVL after adding liquidity must be >= swap amount
+    // This ensures the pool can actually handle the trade
+    const totalEffectiveTVLAfter = currentEffectiveTVLInBand + additionalEffectiveTVL;
+    const canHandleSwap = totalEffectiveTVLAfter >= amount;
     
     // Price bounds for the specified range
     const rangeMultiplier = 1 - (rangeWidthValue / 100);
@@ -194,7 +208,11 @@ export default function Simulate() {
       upperPrice,
       currentPriceImpact,
       targetPriceImpact,
-      targetSlippageValue
+      targetSlippageValue,
+      requiredEffectiveTVL,
+      totalEffectiveTVLAfter,
+      canHandleSwap,
+      currentEffectiveTVLInBand
     };
   };
 
@@ -517,6 +535,22 @@ export default function Simulate() {
                           </div>
                         ) : (
                           <div className="space-y-3">
+                            {/* Warning if swap cannot be handled */}
+                            {!liquidityCalc.canHandleSwap && (
+                              <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg border-2 border-red-400 dark:border-red-600">
+                                <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+                                  ⚠️ Insufficient Liquidity Warning
+                                </p>
+                                <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                                  Even with the recommended liquidity addition, the total effective TVL ({formatUSD(liquidityCalc.totalEffectiveTVLAfter)}) 
+                                  may not be sufficient to handle a ${parseFloat(swapAmount).toLocaleString()} swap at {liquidityCalc.targetSlippageValue}% slippage.
+                                </p>
+                                <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                                  💡 Consider: Increasing the band width, increasing target slippage, or splitting the trade into smaller amounts.
+                                </p>
+                              </div>
+                            )}
+                            
                             {/* Main Recommendation */}
                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-sm">
                               <div className="flex items-center gap-2 mb-2">
@@ -529,9 +563,13 @@ export default function Simulate() {
                                 {formatUSD(liquidityCalc.capitalNeeded)}
                               </p>
                               <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                                <p>• <strong>Range:</strong> ±{liquidityCalc.rangeWidthPercent}% from current price ({(liquidityCalc.rangeWidthPercent * 2).toFixed(1)}% total width)</p>
-                                <p>• <strong>Price bounds:</strong> {liquidityCalc.lowerPrice >= 10 ? liquidityCalc.lowerPrice.toFixed(0) : liquidityCalc.lowerPrice.toFixed(2)} - {liquidityCalc.upperPrice >= 10 ? liquidityCalc.upperPrice.toFixed(0) : liquidityCalc.upperPrice.toFixed(2)} {selectedPool?.token1Symbol}</p>
+                                <p>• <strong>Range:</strong> ±{liquidityCalc.rangeWidthPercent}% from current price ({(liquidityCalc.rangeWidthPercent * 2).toFixed(3)}% total width)</p>
+                                <p>• <strong>Price bounds:</strong> {liquidityCalc.lowerPrice >= 10 ? liquidityCalc.lowerPrice.toFixed(0) : liquidityCalc.lowerPrice.toFixed(4)} - {liquidityCalc.upperPrice >= 10 ? liquidityCalc.upperPrice.toFixed(0) : liquidityCalc.upperPrice.toFixed(4)} {selectedPool?.token1Symbol}</p>
                                 <p>• <strong>Capital efficiency:</strong> ~{liquidityCalc.efficiency.toFixed(0)}x vs full-range</p>
+                                <p>• <strong>Total effective TVL after:</strong> {formatUSD(liquidityCalc.totalEffectiveTVLAfter)}</p>
+                                {liquidityCalc.currentEffectiveTVLInBand > 0 && (
+                                  <p>• <strong>Current effective TVL in band:</strong> {formatUSD(liquidityCalc.currentEffectiveTVLInBand)}</p>
+                                )}
                               </div>
                             </div>
 
