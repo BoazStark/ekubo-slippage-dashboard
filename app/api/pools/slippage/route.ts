@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchPoolsData } from '@/lib/database';
 import { estimateSimpleSlippage } from '@/lib/slippage';
 import { fetchEkuboPrices, adjustApiPriceToUSD } from '@/lib/price-fetcher';
+import { fetchCoinGeckoPrices } from '@/lib/coingecko-fetcher';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 30; // Revalidate every 30 seconds
@@ -36,6 +37,20 @@ export async function GET() {
     const ekuboPrices = await fetchEkuboPrices();
     console.log(`Fetched ${ekuboPrices.size} prices from Ekubo API`);
     
+    // If Ekubo API failed, try CoinGecko as fallback
+    let coingeckoPrices = new Map<string, number>();
+    if (ekuboPrices.size === 0) {
+      console.log('Ekubo API unavailable, trying CoinGecko as fallback...');
+      const pools = await fetchPoolsData();
+      const allSymbols = new Set<string>();
+      pools.forEach(pool => {
+        if (pool.token0_symbol) allSymbols.add(pool.token0_symbol);
+        if (pool.token1_symbol) allSymbols.add(pool.token1_symbol);
+      });
+      coingeckoPrices = await fetchCoinGeckoPrices(Array.from(allSymbols));
+      console.log(`Fetched ${coingeckoPrices.size} prices from CoinGecko`);
+    }
+    
     // Helper to normalize address for lookup
     const normalizeAddress = (address: string | bigint): string => {
       if (typeof address === "string") {
@@ -58,29 +73,35 @@ export async function GET() {
       const token0RawPrice = ekuboPrices.get(token0AddressHex) || 0;
       const token1RawPrice = ekuboPrices.get(token1AddressHex) || 0;
       
-      // Log if prices not found (for debugging)
-      if (token0RawPrice === 0 && ekuboPrices.size > 0) {
-        console.warn(`Price not found for token0 ${pool.token0_symbol} (${token0AddressHex})`);
-      }
-      if (token1RawPrice === 0 && ekuboPrices.size > 0) {
-        console.warn(`Price not found for token1 ${pool.token1_symbol} (${token1AddressHex})`);
-      }
+      // Try CoinGecko if Ekubo API failed
+      const token0CoinGeckoPrice = coingeckoPrices.get(pool.token0_symbol) || 0;
+      const token1CoinGeckoPrice = coingeckoPrices.get(pool.token1_symbol) || 0;
       
       // Convert raw API prices to USD prices
       let token0PriceUsd: number;
       let token1PriceUsd: number;
       let usingApiPrices = false;
+      let priceSource = 'database';
       
       if (token0RawPrice > 0 && token1RawPrice > 0) {
-        // Use API prices
+        // Use Ekubo API prices
         token0PriceUsd = adjustApiPriceToUSD(token0RawPrice, pool.token0_decimals);
         token1PriceUsd = adjustApiPriceToUSD(token1RawPrice, pool.token1_decimals);
         usingApiPrices = true;
+        priceSource = 'ekubo-api';
+      } else if (token0CoinGeckoPrice > 0 && token1CoinGeckoPrice > 0) {
+        // Use CoinGecko prices
+        token0PriceUsd = token0CoinGeckoPrice;
+        token1PriceUsd = token1CoinGeckoPrice;
+        priceSource = 'coingecko';
       } else {
         // Fallback to database prices
         token0PriceUsd = pool.token0_price_usd || 0;
         token1PriceUsd = pool.token1_price_usd || 0;
-        console.warn(`Using database prices for ${pool.token0_symbol}/${pool.token1_symbol} - API prices not found`);
+        priceSource = 'database';
+        if (pools.indexOf(pool) < 5) {
+          console.warn(`Using ${priceSource} prices for ${pool.token0_symbol}/${pool.token1_symbol}`);
+        }
       }
       
       // Log price comparison for first few pools
