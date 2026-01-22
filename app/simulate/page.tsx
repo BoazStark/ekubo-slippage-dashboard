@@ -474,7 +474,7 @@ export default function Simulate() {
                 </div>
 
                 {/* Concentrated Liquidity Recommendation */}
-                {liquidityCalc && (
+                {selectedPool && swapAmount && (
                   <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <div className="flex items-start gap-3">
                       <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,9 +482,23 @@ export default function Simulate() {
                       </svg>
                       <div className="w-full">
                         <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                          💡 Liquidity Recommendation for {liquidityCalc.targetSlippageValue}% Target Slippage
+                          💡 Liquidity Recommendation for {parseFloat(targetSlippage) || 0.5}% Target Slippage
                         </p>
-                        {slippage < liquidityCalc.targetSlippageValue ? (
+                        {!liquidityCalc ? (
+                          // Calculation returned null - likely fee >= target
+                          <div className="bg-orange-100 dark:bg-orange-900/30 p-4 rounded-lg border-2 border-orange-400 dark:border-orange-600">
+                            <p className="text-sm font-semibold text-orange-800 dark:text-orange-200 mb-2">
+                              ⚠️ Target Slippage Cannot Be Achieved
+                            </p>
+                            <p className="text-xs text-orange-700 dark:text-orange-300 mb-2">
+                              The pool fee ({selectedPool.feePercent.toFixed(2)}%) is already ≥ your target slippage ({parseFloat(targetSlippage) || 0.5}%). 
+                              The minimum achievable slippage for any trade is the pool fee itself.
+                            </p>
+                            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                              💡 Try increasing your target slippage to at least {selectedPool.feePercent.toFixed(2)}% or higher.
+                            </p>
+                          </div>
+                        ) : slippage < liquidityCalc.targetSlippageValue ? (
                           <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg border-2 border-green-400 dark:border-green-600">
                             <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
                               ✨ Current slippage ({formatPercent(slippage)}) is already below your {liquidityCalc.targetSlippageValue}% target!
@@ -548,6 +562,15 @@ export default function Simulate() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Show message when slippage is null but pool is selected */}
+            {selectedPool && swapAmount && slippage === null && (
+              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ Please enter a valid swap amount to calculate slippage.
+                </p>
               </div>
             )}
 
