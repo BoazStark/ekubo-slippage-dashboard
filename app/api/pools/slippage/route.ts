@@ -67,19 +67,27 @@ export async function GET() {
       }
       
       // Convert raw API prices to USD prices
-      const token0PriceUsd = token0RawPrice > 0 
-        ? adjustApiPriceToUSD(token0RawPrice, pool.token0_decimals)
-        : (pool.token0_price_usd || 0); // Fallback to database price if API price unavailable
+      let token0PriceUsd: number;
+      let token1PriceUsd: number;
+      let usingApiPrices = false;
       
-      const token1PriceUsd = token1RawPrice > 0
-        ? adjustApiPriceToUSD(token1RawPrice, pool.token1_decimals)
-        : (pool.token1_price_usd || 0); // Fallback to database price if API price unavailable
+      if (token0RawPrice > 0 && token1RawPrice > 0) {
+        // Use API prices
+        token0PriceUsd = adjustApiPriceToUSD(token0RawPrice, pool.token0_decimals);
+        token1PriceUsd = adjustApiPriceToUSD(token1RawPrice, pool.token1_decimals);
+        usingApiPrices = true;
+      } else {
+        // Fallback to database prices
+        token0PriceUsd = pool.token0_price_usd || 0;
+        token1PriceUsd = pool.token1_price_usd || 0;
+        console.warn(`Using database prices for ${pool.token0_symbol}/${pool.token1_symbol} - API prices not found`);
+      }
       
-      // Log price comparison for debugging (first pool only)
-      if (pools.indexOf(pool) === 0) {
-        console.log(`Sample pool: ${pool.token0_symbol}/${pool.token1_symbol}`);
-        console.log(`  Token0: API=${token0RawPrice}, USD=${token0PriceUsd}, DB=${pool.token0_price_usd}`);
-        console.log(`  Token1: API=${token1RawPrice}, USD=${token1PriceUsd}, DB=${pool.token1_price_usd}`);
+      // Log price comparison for first few pools
+      if (pools.indexOf(pool) < 3) {
+        console.log(`Pool ${pools.indexOf(pool) + 1}: ${pool.token0_symbol}/${pool.token1_symbol}`);
+        console.log(`  Token0 (${pool.token0_symbol}): ${usingApiPrices ? 'API' : 'DB'} price=${token0PriceUsd.toFixed(2)}, raw=${token0RawPrice}`);
+        console.log(`  Token1 (${pool.token1_symbol}): ${usingApiPrices ? 'API' : 'DB'} price=${token1PriceUsd.toFixed(2)}, raw=${token1RawPrice}`);
       }
       
       // Recalculate TVL using fresh prices and actual balances
