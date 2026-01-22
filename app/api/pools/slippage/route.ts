@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchPoolsData } from '@/lib/database';
 import { estimateSimpleSlippage } from '@/lib/slippage';
+import { fetchEkuboPrices, adjustApiPriceToUSD } from '@/lib/price-fetcher';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 30; // Revalidate every 30 seconds
@@ -30,10 +31,51 @@ interface PoolWithSlippage {
 
 export async function GET() {
   try {
+    // Fetch fresh prices from Ekubo API
+    const ekuboPrices = await fetchEkuboPrices();
+    
+    // Helper to normalize address for lookup
+    const normalizeAddress = (address: string | bigint): string => {
+      if (typeof address === "string") {
+        if (address.startsWith("0x")) {
+          return address.toLowerCase();
+        }
+        return "0x" + BigInt(address).toString(16);
+      }
+      return "0x" + address.toString(16);
+    };
+    
     const pools = await fetchPoolsData();
     
     const poolsWithSlippage: PoolWithSlippage[] = pools.map(pool => {
-      const tvl = Number(pool.tvl_usd) || 0;
+      // Get fresh prices from Ekubo API
+      const token0AddressHex = normalizeAddress(pool.token0);
+      const token1AddressHex = normalizeAddress(pool.token1);
+      
+      const token0RawPrice = ekuboPrices.get(token0AddressHex) || 0;
+      const token1RawPrice = ekuboPrices.get(token1AddressHex) || 0;
+      
+      // Convert raw API prices to USD prices
+      const token0PriceUsd = token0RawPrice > 0 
+        ? adjustApiPriceToUSD(token0RawPrice, pool.token0_decimals)
+        : (pool.token0_price_usd || 0); // Fallback to database price if API price unavailable
+      
+      const token1PriceUsd = token1RawPrice > 0
+        ? adjustApiPriceToUSD(token1RawPrice, pool.token1_decimals)
+        : (pool.token1_price_usd || 0); // Fallback to database price if API price unavailable
+      
+      // Recalculate TVL using fresh prices and actual balances
+      let tvl = 0;
+      if (pool.balance0 && pool.balance1 && token0PriceUsd > 0 && token1PriceUsd > 0) {
+        const balance0Decimal = Number(pool.balance0) / Math.pow(10, pool.token0_decimals);
+        const balance1Decimal = Number(pool.balance1) / Math.pow(10, pool.token1_decimals);
+        const token0ValueUsd = balance0Decimal * token0PriceUsd;
+        const token1ValueUsd = balance1Decimal * token1PriceUsd;
+        tvl = token0ValueUsd + token1ValueUsd;
+      } else {
+        // Fallback to database TVL if we don't have fresh prices or balances
+        tvl = Number(pool.tvl_usd) || 0;
+      }
       
       // Calculate fee percentage: (fee / fee_denominator) * 100
       const feeNum = Number(pool.fee);
@@ -68,8 +110,8 @@ export async function GET() {
         token1Symbol: pool.token1_symbol || 'Unknown',
         token0Address: pool.token0,
         token1Address: pool.token1,
-        token0Price: pool.token0_price_usd || 0,
-        token1Price: pool.token1_price_usd || 0,
+        token0Price: token0PriceUsd,
+        token1Price: token1PriceUsd,
         fee: pool.fee,
         feePercent: feePercent,
         tickSpacing: pool.tick_spacing,

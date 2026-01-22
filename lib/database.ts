@@ -25,6 +25,8 @@ export interface PoolData {
   token1_decimals: number;
   token0_price_usd: number | null;
   token1_price_usd: number | null;
+  balance0: string;
+  balance1: string;
   fee: string;
   fee_denominator: string;
   tick_spacing: number;
@@ -57,6 +59,8 @@ export async function fetchPoolsData(): Promise<PoolData[]> {
       t1.token_decimals as token1_decimals,
       p0.price_usd as token0_price_usd,
       p1.price_usd as token1_price_usd,
+      ptv.balance0,
+      ptv.balance1,
       pk.fee,
       pk.fee_denominator,
       pk.tick_spacing,
