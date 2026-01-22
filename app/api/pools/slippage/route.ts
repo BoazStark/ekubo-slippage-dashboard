@@ -32,7 +32,9 @@ interface PoolWithSlippage {
 export async function GET() {
   try {
     // Fetch fresh prices from Ekubo API
+    console.log('Fetching prices from Ekubo API...');
     const ekuboPrices = await fetchEkuboPrices();
+    console.log(`Fetched ${ekuboPrices.size} prices from Ekubo API`);
     
     // Helper to normalize address for lookup
     const normalizeAddress = (address: string | bigint): string => {
@@ -46,6 +48,7 @@ export async function GET() {
     };
     
     const pools = await fetchPoolsData();
+    console.log(`Processing ${pools.length} pools`);
     
     const poolsWithSlippage: PoolWithSlippage[] = pools.map(pool => {
       // Get fresh prices from Ekubo API
@@ -55,6 +58,14 @@ export async function GET() {
       const token0RawPrice = ekuboPrices.get(token0AddressHex) || 0;
       const token1RawPrice = ekuboPrices.get(token1AddressHex) || 0;
       
+      // Log if prices not found (for debugging)
+      if (token0RawPrice === 0 && ekuboPrices.size > 0) {
+        console.warn(`Price not found for token0 ${pool.token0_symbol} (${token0AddressHex})`);
+      }
+      if (token1RawPrice === 0 && ekuboPrices.size > 0) {
+        console.warn(`Price not found for token1 ${pool.token1_symbol} (${token1AddressHex})`);
+      }
+      
       // Convert raw API prices to USD prices
       const token0PriceUsd = token0RawPrice > 0 
         ? adjustApiPriceToUSD(token0RawPrice, pool.token0_decimals)
@@ -63,6 +74,13 @@ export async function GET() {
       const token1PriceUsd = token1RawPrice > 0
         ? adjustApiPriceToUSD(token1RawPrice, pool.token1_decimals)
         : (pool.token1_price_usd || 0); // Fallback to database price if API price unavailable
+      
+      // Log price comparison for debugging (first pool only)
+      if (pools.indexOf(pool) === 0) {
+        console.log(`Sample pool: ${pool.token0_symbol}/${pool.token1_symbol}`);
+        console.log(`  Token0: API=${token0RawPrice}, USD=${token0PriceUsd}, DB=${pool.token0_price_usd}`);
+        console.log(`  Token1: API=${token1RawPrice}, USD=${token1PriceUsd}, DB=${pool.token1_price_usd}`);
+      }
       
       // Recalculate TVL using fresh prices and actual balances
       let tvl = 0;

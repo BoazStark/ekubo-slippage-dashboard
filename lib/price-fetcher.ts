@@ -34,18 +34,28 @@ function normalizeAddress(address: string | bigint): string {
 export async function fetchEkuboPrices(): Promise<Map<string, number>> {
   try {
     const url = `${API_ENDPOINT}/prices/${STARKNET_MAINNET_USDC}`;
+    console.log(`Fetching prices from: ${url}`);
+    
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
       },
-      next: { revalidate: 60 } // Cache for 60 seconds
+      // Remove next.js cache config for server-side fetch
+      cache: 'no-store'
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${response.statusText}. Body: ${errorText}`);
     }
 
     const data: PriceResponse = await response.json();
+    console.log(`Received ${data.prices?.length || 0} prices from API`);
+    
+    if (!data.prices || !Array.isArray(data.prices)) {
+      throw new Error(`Invalid API response format. Expected prices array, got: ${JSON.stringify(data).substring(0, 200)}`);
+    }
+
     const priceMap = new Map<string, number>();
 
     for (const tokenPrice of data.prices) {
@@ -53,9 +63,13 @@ export async function fetchEkuboPrices(): Promise<Map<string, number>> {
       priceMap.set(normalizedAddress, tokenPrice.price);
     }
 
+    console.log(`Mapped ${priceMap.size} prices`);
     return priceMap;
   } catch (error) {
     console.error("Failed to fetch prices from Ekubo API:", error);
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
     return new Map();
   }
 }
