@@ -75,7 +75,8 @@ export async function fetchPoolsData(): Promise<PoolData[]> {
     LEFT JOIN latest_prices p0 ON p0.token_address = pk.token0 AND p0.chain_id = pk.chain_id
     LEFT JOIN latest_prices p1 ON p1.token_address = pk.token1 AND p1.chain_id = pk.chain_id
     LEFT JOIN pool_tvl ptv ON ptv.pool_key_id = pk.pool_key_id
-    WHERE ps.liquidity > 0
+    WHERE pk.chain_id = '23448594291968334' -- Starknet Mainnet only
+      AND ps.liquidity > 0
       AND p0.price_usd IS NOT NULL
       AND p1.price_usd IS NOT NULL
       AND p0.price_usd > 0
