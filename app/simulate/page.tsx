@@ -582,7 +582,7 @@ export default function Simulate() {
                                 <p>• <strong>Price bounds:</strong> {liquidityCalc.lowerPrice >= 10 ? liquidityCalc.lowerPrice.toFixed(0) : liquidityCalc.lowerPrice.toFixed(4)} - {liquidityCalc.upperPrice >= 10 ? liquidityCalc.upperPrice.toFixed(0) : liquidityCalc.upperPrice.toFixed(4)} {selectedPool?.token1Symbol}</p>
                                 <p>• <strong>Capital efficiency:</strong> ~{liquidityCalc.efficiency.toFixed(0)}x vs full-range</p>
                                 {liquidityCalc.minLiquidityForSwap > 0 && (
-                                  <p className="text-orange-600 dark:text-orange-400">• <strong>Minimum for swap:</strong> {formatUSD(liquidityCalc.minLiquidityForSwap)} (swap ${parseFloat(swapAmount).toLocaleString()} > current TVL {formatUSD(selectedPool.tvlUsd)})</p>
+                                  <p className="text-orange-600 dark:text-orange-400">• <strong>Minimum for swap:</strong> {formatUSD(liquidityCalc.minLiquidityForSwap)} (swap ${parseFloat(swapAmount).toLocaleString()} &gt; current TVL {formatUSD(selectedPool.tvlUsd)})</p>
                                 )}
                                 {liquidityCalc.capitalNeededForSlippage > liquidityCalc.minLiquidityForSwap && (
                                   <p>• <strong>Additional for slippage target:</strong> {formatUSD(liquidityCalc.capitalNeededForSlippage - liquidityCalc.minLiquidityForSwap)}</p>
