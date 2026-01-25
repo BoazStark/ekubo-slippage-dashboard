@@ -11,7 +11,9 @@ export default function Docs() {
         <div className="mb-8">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <Logo size={48} className="flex-shrink-0" />
+              <a href="/" className="flex-shrink-0 -ml-8 hover:opacity-80 transition-opacity">
+                <Logo size={72} className="flex-shrink-0" />
+              </a>
               <div>
                 <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Documentation

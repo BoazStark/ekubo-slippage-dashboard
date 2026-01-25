@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { formatUSD, formatPercent } from '@/lib/utils';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { Logo } from '@/components/Logo';
 import { calculateSwapOutput } from '@/lib/slippage';
 
 interface Pool {
@@ -260,13 +261,18 @@ export default function Simulate() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Slippage Simulator
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Estimate slippage for custom swap amounts
-              </p>
+            <div className="flex items-center gap-4">
+              <a href="/" className="flex-shrink-0 -ml-8 hover:opacity-80 transition-opacity">
+                <Logo size={72} className="flex-shrink-0" />
+              </a>
+              <div>
+                <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Slippage Simulator
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Estimate slippage for custom swap amounts
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <a
