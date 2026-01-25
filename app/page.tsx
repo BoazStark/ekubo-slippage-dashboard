@@ -178,13 +178,11 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={fetchPools}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-              >
-                {loading ? 'Refreshing...' : 'Refresh'}
-              </button>
+              {lastUpdate && (
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Last updated: {lastUpdate}
+                </span>
+              )}
               <a
                 href="/docs"
                 className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium text-sm flex items-center gap-2"
@@ -280,11 +278,6 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-4">
-            {lastUpdate && (
-              <span className="text-sm text-gray-500">
-                Last updated: {lastUpdate}
-              </span>
-            )}
             <button
               onClick={exportToCSV}
               disabled={filteredPools.length === 0}
@@ -294,6 +287,13 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export CSV
+            </button>
+            <button
+              onClick={fetchPools}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
