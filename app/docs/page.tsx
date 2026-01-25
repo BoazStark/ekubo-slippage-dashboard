@@ -1,6 +1,7 @@
 'use client';
 
 import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { Logo } from '@/components/Logo';
 
 export default function Docs() {
   return (
@@ -9,13 +10,16 @@ export default function Docs() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Documentation
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Complete guide to using the Ekubo Slippage Dashboard
-              </p>
+            <div className="flex items-center gap-4">
+              <Logo size={48} className="flex-shrink-0" />
+              <div>
+                <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Documentation
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Complete guide to using the Ekubo Slippage Dashboard
+                </p>
+              </div>
             </div>
             <DarkModeToggle />
           </div>
