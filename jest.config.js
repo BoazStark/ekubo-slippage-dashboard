@@ -24,6 +24,10 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
   ],
+  // Ensure React runs in development mode during tests
+  globals: {
+    'process.env.NODE_ENV': 'test',
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
